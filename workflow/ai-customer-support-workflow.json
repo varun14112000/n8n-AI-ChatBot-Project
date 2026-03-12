@@ -1,0 +1,182 @@
+{
+  "name": "AI Customer Support Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "public": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -144,
+        0
+      ],
+      "id": "9d781ad2-317d-41e5-9bc2-78ea94170ce3",
+      "name": "When chat message received",
+      "webhookId": "4318f8a3-2513-4db4-9fe9-8d828b8dbf5b"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1gVCxEIwETZUwgwxIqpdTMN84QrVLLDieweKoUwB20XM",
+          "mode": "list",
+          "cachedResultName": "Support_FAQ",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1gVCxEIwETZUwgwxIqpdTMN84QrVLLDieweKoUwB20XM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1gVCxEIwETZUwgwxIqpdTMN84QrVLLDieweKoUwB20XM/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        80,
+        0
+      ],
+      "id": "bb746788-7ca4-43ba-954f-2f57c9debbdc",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "sdVjeFNSNzSgEUMn",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "YOUR_GROK_API_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"model\": \"llama-3.1-8b-instant\", \"messages\": [ { \"role\": \"system\", \"content\": \"You are a helpful AI customer support assistant. Use the following FAQ data to answer customer questions accurately:\\n\\n\" + $('Get row(s) in sheet').all().map(item => { const keys = Object.keys(item.json).filter(k => k !== 'row_number'); return 'Q: ' + item.json[keys[0]] + '\\nA: ' + item.json[keys[1]]; }).join('\\n\\n') + \"\\n\\nIf the question is not covered in the FAQ, politely let the customer know and offer to connect them with a human agent.\" }, { \"role\": \"user\", \"content\": $('When chat message received').item.json.chatInput } ] } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        304,
+        0
+      ],
+      "id": "f4818621-9fd8-408b-8733-d6dcd4b454e3",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.reply }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        752,
+        0
+      ],
+      "id": "76b2c319-c630-4f20-a667-027d4ed185a9",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6b9ab9d5-a69c-465a-80e1-56ec6ab93e55",
+              "name": "reply",
+              "value": "={{$json.choices[0].message.content}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        528,
+        0
+      ],
+      "id": "9ccc9333-2f25-4b1f-a7a5-710fea6477b2",
+      "name": "Edit Fields"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "be9a3fb0-b17b-4474-9a5d-7116bc57b048",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "7a285a1d6c3a12ef34a4bc7f0d60badbb67c09ec3549168c91c22ec053c088e7"
+  },
+  "id": "0aNDWlO9iqEd2JUY",
+  "tags": []
+}
